@@ -1,2 +1,5 @@
 .idea/
+doc/
 cmake-build-debug/
+
+doxyfile
