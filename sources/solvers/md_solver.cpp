@@ -107,20 +107,20 @@ void MDSolver::thermostat() {
 }
 
 void MDSolver::randomize_velocities() {
-    for(auto& atom: m_atoms) {
-        atom->randomize_velocity(m_temperature, m_random);
+    for(std::size_t aid = 0; aid < m_atoms.size(); ++aid) {
+        m_atoms[aid]->randomize_velocity(m_temperature, m_random);
     }
 }
 
 void MDSolver::calculate_velocities() {
-    for(auto& atom: m_atoms) {
-        atom->calculate_velocity(m_dt);
+    for(std::size_t aid = 0; aid < m_atoms.size(); ++aid) {
+        m_atoms[aid]->calculate_velocity(m_dt);
     }
 }
 
 void MDSolver::calculate_positions() {
-    for(auto& atom: m_atoms) {
-        atom->calculate_position(m_dt);
+    for(std::size_t aid = 0; aid < m_atoms.size(); ++aid) {
+        m_atoms[aid]->calculate_position(m_dt);
     }
 }
 
@@ -136,18 +136,24 @@ void MDSolver::calculate_forces() {
     double engcorrection; // Energy necessary shift the potential avoiding discontinuities
     double force_cutoff_2 = m_force_cutoff * m_force_cutoff;
 
-    for(auto& atom: m_atoms) {
-        atom->clear_forces();
+    for(std::size_t aid = 0; aid < m_atoms.size(); ++aid) {
+        m_atoms[aid]->clear_forces();
     }
 
     engcorrection = 4.0 * (1.0 / std::pow(force_cutoff_2, 6.0) - 1.0 / std::pow(force_cutoff_2, 3));
 
-    double engconf = 0.0;
+    // double engconf = 0.0;
 
-    for(auto& atom: m_atoms) {
-        for(auto& neighbor_atom: atom->neighbors()) {
-            auto distance = atom->position() - neighbor_atom->position();
-            auto distance_pbc = periodic_boundary_condition(m_cell, distance);
+#pragma omp parallel for
+    for(std::size_t aid = 0; aid < m_atoms.size() - 1; ++aid) {
+        auto atom = m_atoms[aid];
+        auto neighbors = atom->neighbors();
+
+        for(std::size_t nid = 0; nid < neighbors.size(); ++nid) {
+            auto neighbor_atom = neighbors[nid].lock();
+
+            std::valarray<double> distance = atom->position() - neighbor_atom->position();
+            std::valarray<double> distance_pbc = periodic_boundary_condition(m_cell, distance);
 
             double distance_pbc_2 = (distance_pbc * distance_pbc).sum();
 
@@ -160,14 +166,9 @@ void MDSolver::calculate_forces() {
             double distance_pbc_12 = distance_pbc_6  * distance_pbc_6;
             double distance_pbc_14 = distance_pbc_12 * distance_pbc_2;
 
-            engconf += 4.0 * (1.0 / distance_pbc_12 - 1.0/distance_pbc_6) - engcorrection;
+            // engconf += 4.0 * (1.0 / distance_pbc_12 - 1.0/distance_pbc_6) - engcorrection;
 
-            auto f = 2.0 * distance_pbc * 4.0 * (6.0/distance_pbc_14 - 3.0/distance_pbc_8);
-
-            if(distance_pbc_12 == 0.0) {
-                std::cerr << "Error! Zero distance on atom: " << atom->position()[0] << ", " << atom->position()[1] << ", " << atom->position()[2] << " and atom " << ", " << neighbor_atom->position()[0] << ", " << neighbor_atom->position()[1] << ", " << neighbor_atom->position()[2] << std::endl;
-                return;
-            }
+            std::valarray<double> f = 2.0 * distance_pbc * 4.0 * (6.0/distance_pbc_14 - 3.0/distance_pbc_8);
 
             atom->plus_force(f);
             neighbor_atom->minus_force(f);
@@ -200,7 +201,7 @@ void MDSolver::renew_list() {
         for(std::size_t naid = aid + 1; naid < m_atoms.size(); ++naid) {
             auto neighbor_atom = m_atoms[naid];
 
-            auto distance = atom->position() - neighbor_atom->position();
+            std::valarray<double> distance = atom->position() - neighbor_atom->position();
             auto distance_pbc = periodic_boundary_condition(m_cell, distance);
 
             double d_2 = (distance_pbc * distance_pbc).sum();
@@ -233,4 +234,8 @@ void MDSolver::solve() {
     thermostat();
 
     calculate_engkin();
+}
+
+double MDSolver::dt() const noexcept {
+    return m_dt;
 }

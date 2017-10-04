@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.2)
 project(CppMD)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -O3")
 
 set(SOURCE_FILES
         includes/random/random.h

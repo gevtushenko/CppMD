@@ -34,7 +34,7 @@ public:
     double distance_to(Atom::Ptr atom);
     void clear_neighbors_list();
     void add_neighbor(Atom::Ptr neighbor);
-    std::vector<Atom::Ptr>& neighbors();
+    std::vector< std::weak_ptr<Atom> >& neighbors();
     void randomize_velocity(double& temperature, Random& random);
     void plus_force(const std::valarray<double>& f);
     void minus_force(const std::valarray<double>& f);
@@ -46,7 +46,7 @@ private:
     std::valarray<double> m_velocity;
     std::valarray<double> m_forces;
 
-    std::vector<Ptr> m_neighbors;
+    std::vector< std::weak_ptr<Atom> > m_neighbors;
 
     double m_mass;
 };

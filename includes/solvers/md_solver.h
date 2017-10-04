@@ -42,6 +42,8 @@ public:
     void renew_list();
     void solve();
 
+    double dt() const noexcept;
+
 private:
     std::vector< std::shared_ptr<Atom> > m_atoms;
 

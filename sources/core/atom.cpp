@@ -68,8 +68,8 @@ void Atom::clear_forces() {
 }
 
 double Atom::distance_to(Atom::Ptr atom) {
-    auto dif    = atom->position() - m_position;
-    auto dif_2  = dif * dif;
+    std::valarray<double> dif    = atom->position() - m_position;
+    std::valarray<double> dif_2  = dif * dif;
     return std::sqrt(dif_2.sum());
 }
 
@@ -81,7 +81,7 @@ void Atom::add_neighbor(Atom::Ptr neighbor) {
     m_neighbors.push_back(neighbor);
 }
 
-std::vector<Atom::Ptr>& Atom::neighbors() {
+std::vector< std::weak_ptr<Atom> >& Atom::neighbors() {
     return m_neighbors;
 }
 
